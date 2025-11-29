@@ -1,1 +1,0 @@
-# wrapper pour Skinner (SLURM)

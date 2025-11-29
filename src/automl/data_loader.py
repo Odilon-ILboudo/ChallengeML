@@ -1,1 +1,0 @@
-# lecture .data/.solution/.type

@@ -1,1 +1,0 @@
-# sauvegarde modèles (joblib)
