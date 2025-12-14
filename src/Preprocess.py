@@ -57,19 +57,44 @@ class Preprocess:
         data_path = os.path.join(path, name + ".data")
         solution_path = os.path.join(path, name + ".solution")
         type_path = os.path.join(path, name + ".type")
-        
-        
+
+        labels = pd.read_csv(solution_path, sep=r"\s+", header=None)
+        types = pd.read_csv(type_path, header=None)[0].tolist()
+    
         # Détection simple du genre de data avec ":" comme (data_F) pour éviter ParserError
         with open(data_path, "r", encoding="utf-8", errors="ignore") as f:
             first_line = f.readline().strip()
             if ":" in first_line:
-                print("Erreur: dataset sparse détecté (format index:val). Ce loader (pandas) ne gère pas ce genre de Dataset pour l'instant.")
-                return None
+                print("dataset sparse détecté (format index:val).")
+                data_vals = []
+                row_ind = []
+                col_ind = []
+                for r_idx, line in enumerate(f):
+                    parts = line.strip().split()
+                    for part in parts:
+                        if ':' in part:
+                            c_str, v_str = part.split(':')
+                            c = int(c_str)
+                            row_ind.append(r_idx)
+                            col_ind.append(c) 
+                            data_vals.append(float(v_str))
+                if len(col_ind) > 0:
+            # Check modification for 0-based
+                    min_col = min(col_ind)
+                    if min_col == 1:
+                        col_ind = [c - 1 for c in col_ind] # Convert to 0-based
+                    
+                    X = csr_matrix((data_vals, (row_ind, col_ind)))
+                else:
+                    # Fallback or empty
+                    X = csr_matrix((0, 0))
+                
+
+                return X, labels, types, name
         
         
         data = pd.read_csv(data_path, sep=r"\s+", header=None)
-        labels = pd.read_csv(solution_path, sep=r"\s+", header=None)
-        types = pd.read_csv(type_path, header=None)[0].tolist()
+        
         
         return data, labels, types, name
     
