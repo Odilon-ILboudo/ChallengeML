@@ -1,4 +1,8 @@
-xgboost
-lightgbm
 catboost
+lightgbm
+numpy
+pandas
+scikit-learn
 scikit-optimize
+scipy
+xgboost
