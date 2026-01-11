@@ -1,8 +1,22 @@
 import time
 import warnings
-warnings.filterwarnings("ignore")  # <= UNE SEULE INSTRUCTION : coupe tous les warnings
+warnings.filterwarnings("ignore")  # pour coupé tous les warnings
 
-from src import Preprocess, Models, Evaluate
+def _clear():
+    try:
+        from IPython.display import clear_output
+        clear_output(wait=True)
+    except Exception:
+        print("\033[2J\033[H", end="", flush=True)
+
+try:
+    from src import Preprocess, Models, Evaluate
+    _clear()  # pour nettoyer l'écran après l'import 
+except Exception:
+    _clear()
+    print("AutoML | ERROR: problème d'environnement (NumPy/Pandas incompatibles).", flush=True)
+    print("AutoML | Fix rapide: downgrade numpy (<2) ou upgrade les libs compilées (pandas/numexpr/bottleneck).", flush=True)
+    raise
 
 _state = {"pre": None, "models": None}
 
@@ -11,13 +25,9 @@ def _step(text, sleep_s=0.15):
     time.sleep(sleep_s)
 
 def _print_report(rep):
-    if not isinstance(rep, dict): 
+    if not isinstance(rep, dict):
         return
-    try:
-        from IPython.display import clear_output
-        clear_output(wait=True)
-    except Exception:
-        print("\033[2J\033[H", end="", flush=True)
+    _clear()
 
     print("\n========== AutoML | MODEL SELECTION REPORT ==========", flush=True)
     print("Task type      : " + str(rep.get("task_type")), flush=True)
@@ -29,7 +39,7 @@ def _print_report(rep):
     for d in tested_light:
         print("  - " + str(d.get("name")) + " => " + str(d.get("score")), flush=True)
 
-    print("\n--- Selected Top-3 after Light ---", flush=True)
+    print("\n--- Selected Top-2 after Light ---", flush=True)
     top_light = rep.get("top_light", [])
     for d in top_light:
         print("  * " + str(d.get("name")) + " => " + str(d.get("score")), flush=True)
@@ -43,7 +53,7 @@ def _print_report(rep):
             print("  - " + str(d.get("name")) + " => " + str(d.get("score")), flush=True)
 
     print("\nFINAL BEST MODEL : " + str(rep.get("best_model")) + "  (stage=" + str(rep.get("best_stage")) + ")", flush=True)
-    
+
     print("\n------- Validation metrics du model selectionné sur DEV -------", flush=True)
     val_scores = rep.get("val_scores")
     if isinstance(val_scores, dict) and len(val_scores) > 0:
@@ -64,7 +74,7 @@ def fit(data_dest):
 
     _step("Model selection (Light -> Full + Voting)")
     models = Models(pre)
-    models.select_best_model(n_jobs=1)  # n_jobs=1 => moins de spam / warnings
+    models.select_best_model(n_jobs=1)  # moins de spam / warnings
 
     rep = models.get_selection_report()
     _print_report(rep)

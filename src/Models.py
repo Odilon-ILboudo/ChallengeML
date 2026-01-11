@@ -81,7 +81,7 @@ class Models:
                 space[f"model__{k}"] = Categorical(list(v))
         return space
 
-    def optimisation_model(self, model_name, model_info, X, y, method="light", cv=3, scoring=None, n_jobs=-1, n_iter_light=8, n_iter_full=25, onehot_sparse=True, force_output=None, reducer=None, n_components=50, scale_override=None, poly_override=None, poly_degree=2, poly_interaction_only=True, poly_include_bias=False):
+    def optimisation_model(self, model_name, model_info, X, y, method="light", cv=3, scoring=None, n_jobs=1, n_iter_light=4, n_iter_full=8, onehot_sparse=True, force_output=None, reducer=None, n_components=50, scale_override=None, poly_override=None, poly_degree=2, poly_interaction_only=True, poly_include_bias=False):
 
         if model_info is None or "estimator" not in model_info:
             return None
@@ -158,7 +158,7 @@ class Models:
 
         return None, None
 
-    def select_best_model(self, cv=5, rare_threshold=0.30, n_jobs=-1, bayes_cv=3, n_iter_light=8, n_iter_full=25, top_k=3, onehot_sparse=True, force_output=None, reducer=None, n_components=50, scale_override=None, poly_override=None, poly_degree=2, poly_interaction_only=True, poly_include_bias=False):
+    def select_best_model(self, cv=3, rare_threshold=0.30, n_jobs=1, bayes_cv=3, n_iter_light=4, n_iter_full=8, top_k=2, onehot_sparse=True, force_output=None, reducer=None, n_components=50, scale_override=None, poly_override=None, poly_degree=2, poly_interaction_only=True, poly_include_bias=False):
 
         print("AutoML | [Selection] Starting model selection", flush=True)
 
@@ -225,14 +225,20 @@ class Models:
             if pipe_full is None:
                 continue
             try:
-                row = {"model": f"{name} (Full)"}
-                row.update(self._eval_cv(pipe=pipe_full, X=X_train, y=y_train, cv=cv, multi_scoring=multi_scoring, n_jobs=n_jobs))
-                results.append(row)
-                score_main = float(row[f"{main_key}_mean"])
+                # on prend le score FULL comme Light (même source BayesSearchCV, même cv=bayes_cv)
+                score_main = float(getattr(pipe_full, "_automl_best_score_", float("nan")))
+                if score_main != score_main:
+                    continue
                 print("AutoML | [Full] Done: " + str(name) + " => " + str(main_key) + "=" + str(score_main), flush=True)
 
+                # on garde _eval_cv juste pour le report (optionnel), mais on met cv=bayes_cv pour cohérence
+                row = {"model": f"{name} (Full)"}
+                row.update(self._eval_cv(pipe=pipe_full, X=X_train, y=y_train, cv=bayes_cv, multi_scoring=multi_scoring, n_jobs=n_jobs))
+                results.append(row)
+
                 final_candidates.append({"name": name, "pipe": pipe_full, "score": score_main})
-                tested_full.append({"name": name, "score": score_main})  # <--- AJOUT
+                tested_full.append({"name": name, "score": score_main})
+
                 if self._is_better(main_key, score_main, best_full_score):
                     best_full_score, best_full_name, best_full_pipe = score_main, name, pipe_full
             except Exception:
@@ -252,7 +258,7 @@ class Models:
             if vote_full is not None:
                 try:
                     row_v = {"model": f"Ensemble ({vote_full_desc}) (Full)"}
-                    row_v.update(self._eval_cv(pipe=vote_full, X=X_train, y=y_train, cv=cv, multi_scoring=multi_scoring, n_jobs=n_jobs))
+                    row_v.update(self._eval_cv(pipe=vote_full, X=X_train, y=y_train, cv=bayes_cv, multi_scoring=multi_scoring, n_jobs=n_jobs))
                     results.append(row_v)
                     v_score = float(row_v[f"{main_key}_mean"])
                     tested_full.append({"name": f"Ensemble({vote_full_desc})", "score": v_score})  # <--- AJOUT

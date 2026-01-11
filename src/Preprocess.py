@@ -389,7 +389,7 @@ class Preprocess:
         return preprocessor
 
     # Analyse rapide de la sortie réelle (sparse/dense) après application du preprocessor sur un échantillon
-    def analyser_sortie_preprocessor(self, preprocessor, X=None, n_lignes=200):
+    def analyser_sortie_preprocessor(self, preprocessor, X=None, n_lignes=150):
         if preprocessor is None:
             return None
         if X is None:
@@ -397,10 +397,19 @@ class Preprocess:
         if X is None:
             return None
         try:
-            if (not issparse(X)) and hasattr(X, "__len__") and len(X) > int(n_lignes):
-                X_fit = X.iloc[:int(n_lignes)] if isinstance(X, pd.DataFrame) else X[:int(n_lignes)]
+            n = int(n_lignes)
+
+            # on coupe aussi pour les matrices sparse 
+            if hasattr(X, "shape") and X.shape[0] > n:
+               if issparse(X):
+                   X_fit = X[:n]
+               elif isinstance(X, pd.DataFrame):
+                   X_fit = X.iloc[:n]
+               else:
+                   X_fit = X[:n]
             else:
                 X_fit = X
+
             Z = preprocessor.fit_transform(X_fit)
             self.preprocessor_output_ = "sparse" if issparse(Z) else "dense"
             if self.preprocessor_config_ is None:

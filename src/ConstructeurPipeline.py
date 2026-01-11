@@ -10,7 +10,7 @@ class ConstructeurPipeline:
         self.random_state = int(random_state)
 
     def _sortie_est_sparse(self, preproc, X_sample=None):
-        out = self.pre.analyser_sortie_preprocessor(preproc, X=X_sample, n_lignes=200)
+        out = self.pre.analyser_sortie_preprocessor(preproc, X=X_sample, n_lignes=150)
         return (out == "sparse")
 
     def build_pipeline(self, model_info, onehot_sparse=True, force_output=None, reducer=None, n_components=50, scale_override=None, poly_override=None, poly_degree=2, poly_interaction_only=True, poly_include_bias=False, X_for_probe=None):
@@ -29,12 +29,10 @@ class ConstructeurPipeline:
         # Confirmer sortie sparse/dense
         is_sparse_out = self._sortie_est_sparse(preproc, X_sample=X_for_probe)
 
-        # Si modèle ne supporte pas sparse, on tente une sortie dense
+       # Si modèle ne supporte pas sparse => on skip (pas de conversion dense)
         if is_sparse_out and (not bool(model_info.get("accepte_sparse", True))):
-            preproc = self.pre.build_preprocessor(scale_numeric=scale_numeric, cat_encoding="onehot", onehot_sparse=False, force_output="dense", poly_numeric=False, poly_degree=int(poly_degree), poly_interaction_only=bool(poly_interaction_only), poly_include_bias=bool(poly_include_bias))
-            is_sparse_out = self._sortie_est_sparse(preproc, X_sample=X_for_probe)
-            if is_sparse_out:
-                return None
+          return None
+
 
         steps = [("preprocess", preproc)]
 
